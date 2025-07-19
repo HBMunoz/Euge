@@ -279,8 +279,17 @@ html {
 }
 
 body {
+  background: var(--color-background);
+  font-family: var(--font-family-base);
   margin: 0;
   padding: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  /* Prevenir el rebote elástico en iOS */
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 *,
@@ -579,11 +588,13 @@ select.form-control {
 
 /* Container layout */
 .container {
-  width: 100%;
-  margin-right: auto;
-  margin-left: auto;
-  padding-right: var(--space-16);
-  padding-left: var(--space-16);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-16);
+  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (min-width: 640px) {
@@ -735,6 +746,11 @@ body {
   padding: 0;
   min-height: 100vh;
   overflow-x: hidden;
+  /* Prevenir el rebote elástico en iOS */
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .container {
@@ -742,6 +758,9 @@ body {
   margin: 0 auto;
   padding: 0 var(--space-16);
   min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Pantallas - Corregido para funcionar correctamente */
@@ -899,6 +918,14 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  /* Mejorar la experiencia táctil */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 #gameCanvas {
@@ -906,6 +933,9 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   background: rgba(255, 255, 255, 0.9);
   border: 2px solid rgba(255, 255, 255, 0.5);
+  /* Prevenir el zoom y la selección en móviles */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .game-overlay {
@@ -1156,6 +1186,36 @@ body {
   .game-title {
     font-size: clamp(2rem, 12vw, 4rem);
   }
+  
+  /* Mostrar controles táctiles en móvil */
+  .controls-info {
+    display: block !important;
+  }
+  
+  .controls-info h4 {
+    margin-bottom: var(--space-16);
+  }
+  
+  .control-item {
+    display: none;
+  }
+  
+  /* Agregar instrucciones táctiles */
+  .controls-info::after {
+    content: '';
+    display: block;
+    padding: var(--space-12);
+    background: rgba(var(--euge-primary), 0.1);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    color: var(--euge-text-dark);
+    line-height: 1.6;
+  }
+  
+  .controls-info:not(.touch-explained)::after {
+    content: '👆 Desliza arriba: Rotar\A👈👉 Desliza lateral: Mover\A👇 Desliza abajo: Bajar\A👆👆 Doble toque: Caída rápida';
+    white-space: pre-line;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1168,8 +1228,22 @@ body {
     max-width: 200px;
   }
   
-  .controls-info {
-    display: none;
+  /* En móviles pequeños, ocultar completamente la sección de controles */
+  .game-controls {
+    display: none !important;
+  }
+  
+  .game-layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-12);
+  }
+  
+  #gameCanvas {
+    touch-action: none;
+    width: 90vw;
+    max-width: 300px;
+    height: calc(90vw * 2);
+    max-height: 600px;
   }
 }
 
