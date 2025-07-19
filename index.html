@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euge</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Pantalla principal -->
+        <div id="mainScreen" class="screen active">
+            <div class="main-content">
+                <h1 class="game-title">Euge</h1>
+                <p class="game-subtitle">Cozy and chill</p>
+                <div class="menu-buttons">
+                    <button id="playButton" class="btn btn--primary btn--lg">Comenzar</button>
+                    <button id="continueButton" class="btn btn--secondary btn--lg hidden">Continuar</button>
+                </div>
+                <div class="volume-controls">
+                    <label for="volumeSlider" class="volume-label">Sonido</label>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="50" class="volume-slider">
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de juego -->
+        <div id="gameScreen" class="screen">
+            <div class="game-layout">
+                <!-- Panel izquierdo con información -->
+                <div class="game-info">
+                    <div class="info-section">
+                        <h3>Puntuación</h3>
+                        <div id="score" class="score-display">0</div>
+                    </div>
+                    <div class="info-section">
+                        <h3>Líneas</h3>
+                        <div id="lines" class="score-display">0</div>
+                    </div>
+                    <div class="info-section">
+                        <h3>Nivel</h3>
+                        <div id="level" class="score-display">1</div>
+                    </div>
+                    <div class="info-section">
+                        <h3>Próxima</h3>
+                        <canvas id="nextPieceCanvas" width="120" height="120"></canvas>
+                    </div>
+                </div>
+
+                <!-- Área de juego central -->
+                <div class="game-area">
+                    <canvas id="gameCanvas" width="300" height="600"></canvas>
+                    <div class="game-overlay">
+                        <div id="pauseOverlay" class="overlay hidden">
+                            <div class="overlay-content">
+                                <h2>Pausa</h2>
+                                <button id="resumeButton" class="btn btn--primary">Retomar</button>
+                                <button id="newGameButton" class="btn btn--secondary">Nueva</button>
+                            </div>
+                        </div>
+                        <div id="gameOverOverlay" class="overlay hidden">
+                            <div class="overlay-content">
+                                <h2>Sesión</h2>
+                                <p>La conclusión es el umbral del siguiente intento.</p>
+                                <div class="final-score">
+                                    <span>Puntuación: </span>
+                                    <span id="finalScore">0</span>
+                                </div>
+                                <button id="playAgainButton" class="btn btn--primary">Reintentar</button>
+                                <button id="mainMenuButton" class="btn btn--secondary">Menú</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel derecho con controles -->
+                <div class="game-controls">
+                    <button id="pauseButton" class="btn btn--outline btn--sm">Pausa</button>
+                    <div class="controls-info">
+                        <h4>Controles</h4>
+                        <div class="control-item">
+                            <span class="key">←→</span>
+                            <span>Mover</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">↑</span>
+                            <span>Rotar</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">↓</span>
+                            <span>Bajar</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">Espacio</span>
+                            <span>Bajada rápida</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
