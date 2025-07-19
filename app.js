@@ -54,16 +54,77 @@ let keys = {};
 let touchStartX = null;
 let touchStartY = null;
 let touchStartTime = null;
-let lastTapTime = 0;
-let isSwiping = false;
+let lastTouchTime = 0;
+let touchCount = 0;
+let isMobile = false;
+
+// Detección de dispositivo móvil
+function detectMobile() {
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase()) || 
+           ('ontouchstart' in window) || 
+           (navigator.maxTouchPoints > 0);
+}
 
 // Inicialización del juego
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing game...');
+    isMobile = detectMobile();
+    
+    if (isMobile) {
+        document.body.classList.add('mobile-device');
+        // Prevenir scroll y zoom
+        document.addEventListener('touchmove', (e) => {
+            if (e.target.closest('#gameCanvas')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Prevenir zoom con doble toque en todo el documento
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Ajustar el tamaño del canvas según el dispositivo
+        adjustCanvasSize();
+        window.addEventListener('resize', adjustCanvasSize);
+        window.addEventListener('orientationchange', adjustCanvasSize);
+    }
+    
     initializeGame();
     setupEventListeners();
     checkForSavedGame();
 });
+
+function adjustCanvasSize() {
+    if (!isMobile) return;
+    
+    const gameScreen = document.getElementById('gameScreen');
+    const gameArea = document.querySelector('.game-area');
+    
+    if (gameScreen && gameScreen.classList.contains('active')) {
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+        
+        // Calcular el tamaño óptimo del canvas
+        const maxCanvasHeight = viewportHeight * 0.7; // 70% de la altura
+        const cellSize = Math.floor(Math.min(maxCanvasHeight / GAME_CONFIG.gridHeight, viewportWidth * 0.9 / GAME_CONFIG.gridWidth));
+        
+        GAME_CONFIG.blockSize = cellSize;
+        
+        if (gameCanvas) {
+            gameCanvas.width = GAME_CONFIG.gridWidth * cellSize;
+            gameCanvas.height = GAME_CONFIG.gridHeight * cellSize;
+        }
+        
+        if (nextPieceCanvas) {
+            nextPieceCanvas.width = 80;
+            nextPieceCanvas.height = 80;
+        }
+    }
+}
 
 function initializeGame() {
     gameCanvas = document.getElementById('gameCanvas');
@@ -167,21 +228,122 @@ function setupEventListeners() {
         });
     }
     
-    // Controles del teclado
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
+    // Controles del teclado (solo si no es móvil)
+    if (!isMobile) {
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+    }
     
-    // Controles táctiles para móvil
-    setupTouchControls();
+    // Controles táctiles (solo si es móvil)
+    if (isMobile && gameCanvas) {
+        setupTouchControls();
+    }
     
     // Pausar automáticamente cuando se pierde el foco
     window.addEventListener('blur', () => {
-        if (!gameState.gameOver && !gameState.paused) {
+        if (!gameState.gameOver && !gameState.paused && !isMobile) {
             togglePause();
         }
     });
     
     console.log('Event listeners set up');
+}
+
+function setupTouchControls() {
+    const touchArea = gameCanvas;
+    
+    touchArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+    touchArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+    touchArea.addEventListener('touchend', handleTouchEnd, { passive: false });
+}
+
+function handleTouchStart(e) {
+    e.preventDefault();
+    
+    if (gameState.gameOver || gameState.paused) return;
+    
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTime = Date.now();
+    
+    // Detectar triple toque para pausa
+    const currentTime = Date.now();
+    if (currentTime - lastTouchTime < 300) {
+        touchCount++;
+        if (touchCount >= 3) {
+            togglePause();
+            touchCount = 0;
+        }
+    } else {
+        touchCount = 1;
+    }
+    lastTouchTime = currentTime;
+}
+
+function handleTouchMove(e) {
+    e.preventDefault();
+    
+    if (gameState.gameOver || gameState.paused || !touchStartX || !touchStartY) return;
+    
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+    const deltaTime = Date.now() - touchStartTime;
+    
+    // Umbral mínimo para detectar movimiento
+    const threshold = 30;
+    const timeThreshold = 300; // ms
+    
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Movimiento horizontal
+        if (Math.abs(deltaX) > threshold) {
+            if (deltaX > 0) {
+                movePiece(1, 0);
+                playSound('move');
+            } else {
+                movePiece(-1, 0);
+                playSound('move');
+            }
+            // Reset para evitar movimientos múltiples
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }
+    } else {
+        // Movimiento vertical
+        if (deltaY < -threshold && deltaTime < timeThreshold) {
+            // Deslizar hacia arriba - rotar
+            rotatePiece();
+            playSound('rotate');
+            touchStartX = null;
+            touchStartY = null;
+        } else if (deltaY > threshold) {
+            // Deslizar hacia abajo - bajar
+            movePiece(0, 1);
+            touchStartY = touch.clientY;
+        }
+    }
+}
+
+function handleTouchEnd(e) {
+    e.preventDefault();
+    
+    if (gameState.gameOver || gameState.paused) return;
+    
+    const deltaTime = Date.now() - touchStartTime;
+    
+    // Detectar doble toque para bajada rápida
+    if (deltaTime < 200 && touchStartX !== null && touchStartY !== null) {
+        const currentTime = Date.now();
+        if (currentTime - lastTouchTime < 300 && touchCount === 2) {
+            hardDrop();
+            playSound('drop');
+            touchCount = 0;
+        }
+    }
+    
+    touchStartX = null;
+    touchStartY = null;
 }
 
 function handleKeyDown(e) {
@@ -223,122 +385,6 @@ function handleKeyDown(e) {
 
 function handleKeyUp(e) {
     keys[e.code] = false;
-}
-
-// Configuración de controles táctiles
-function setupTouchControls() {
-    const gameArea = document.querySelector('.game-area');
-    
-    if (!gameArea) return;
-    
-    // Prevenir el comportamiento por defecto del navegador
-    gameArea.addEventListener('touchstart', handleTouchStart, { passive: false });
-    gameArea.addEventListener('touchmove', handleTouchMove, { passive: false });
-    gameArea.addEventListener('touchend', handleTouchEnd, { passive: false });
-    
-    // Prevenir el zoom con doble toque en iOS
-    let lastTouchEnd = 0;
-    gameArea.addEventListener('touchend', (e) => {
-        const now = Date.now();
-        if (now - lastTouchEnd <= 300) {
-            e.preventDefault();
-        }
-        lastTouchEnd = now;
-    }, false);
-}
-
-function handleTouchStart(e) {
-    if (gameState.gameOver || gameState.paused) return;
-    
-    e.preventDefault();
-    
-    const touch = e.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-    touchStartTime = Date.now();
-    isSwiping = false;
-    
-    // Detectar doble toque para hard drop
-    const currentTime = Date.now();
-    const tapTimeDiff = currentTime - lastTapTime;
-    
-    if (tapTimeDiff < 300 && tapTimeDiff > 0) {
-        hardDrop();
-        playSound('drop');
-        lastTapTime = 0; // Reset para evitar triple toque
-    } else {
-        lastTapTime = currentTime;
-    }
-}
-
-function handleTouchMove(e) {
-    if (gameState.gameOver || gameState.paused || !touchStartX || !touchStartY) return;
-    
-    e.preventDefault();
-    
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - touchStartX;
-    const deltaY = touch.clientY - touchStartY;
-    const absDeltaX = Math.abs(deltaX);
-    const absDeltaY = Math.abs(deltaY);
-    
-    // Umbral mínimo para considerar un movimiento como gesto
-    const threshold = 30;
-    // Umbral para movimiento continuo hacia abajo
-    const continuousThreshold = 50;
-    
-    // Si ya estamos en medio de un swipe, no procesar más
-    if (isSwiping) return;
-    
-    // Detectar la dirección del swipe
-    if (absDeltaX > threshold || absDeltaY > threshold) {
-        isSwiping = true;
-        
-        // Determinar la dirección predominante
-        if (absDeltaX > absDeltaY) {
-            // Movimiento horizontal
-            if (deltaX > 0) {
-                // Deslizar a la derecha
-                movePiece(1, 0);
-                playSound('move');
-            } else {
-                // Deslizar a la izquierda
-                movePiece(-1, 0);
-                playSound('move');
-            }
-        } else {
-            // Movimiento vertical
-            if (deltaY > 0) {
-                // Deslizar hacia abajo - mover pieza hacia abajo
-                movePiece(0, 1);
-                
-                // Si el deslizamiento hacia abajo es muy largo, continuar bajando
-                if (deltaY > continuousThreshold * 2) {
-                    movePiece(0, 1);
-                }
-            } else {
-                // Deslizar hacia arriba - rotar pieza
-                rotatePiece();
-                playSound('rotate');
-            }
-        }
-        
-        // Reset para permitir el siguiente gesto
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
-    }
-}
-
-function handleTouchEnd(e) {
-    if (gameState.gameOver || gameState.paused) return;
-    
-    e.preventDefault();
-    
-    // Reset de variables táctiles
-    touchStartX = null;
-    touchStartY = null;
-    touchStartTime = null;
-    isSwiping = false;
 }
 
 // Funciones de audio
@@ -401,6 +447,11 @@ function showScreen(screenId) {
     const targetScreen = document.getElementById(screenId);
     if (targetScreen) {
         targetScreen.classList.add('active');
+        
+        // Ajustar tamaño del canvas cuando se muestra la pantalla de juego
+        if (screenId === 'gameScreen' && isMobile) {
+            setTimeout(adjustCanvasSize, 100);
+        }
     }
 }
 
@@ -419,33 +470,13 @@ function startNewGame() {
     console.log('Starting new game...');
     resetGame();
     showScreen('gameScreen');
+    if (isMobile) {
+        adjustCanvasSize();
+    }
     gameState.currentPiece = createPiece();
     gameState.nextPiece = createPiece();
     updateUI();
-    
-    // Mostrar ayuda táctil en dispositivos móviles
-    if (isTouchDevice()) {
-        showTouchHelp();
-    }
-    
     startGameLoop();
-}
-
-// Detectar si es un dispositivo táctil
-function isTouchDevice() {
-    return (('ontouchstart' in window) ||
-        (navigator.maxTouchPoints > 0) ||
-        (navigator.msMaxTouchPoints > 0));
-}
-
-// Mostrar ayuda visual temporal para controles táctiles
-function showTouchHelp() {
-    const helpTimeout = setTimeout(() => {
-        const controlsInfo = document.querySelector('.controls-info');
-        if (controlsInfo) {
-            controlsInfo.classList.add('touch-explained');
-        }
-    }, 5000); // Ocultar después de 5 segundos
 }
 
 function continueGame() {
@@ -453,6 +484,9 @@ function continueGame() {
     if (savedGame) {
         gameState = JSON.parse(savedGame);
         showScreen('gameScreen');
+        if (isMobile) {
+            adjustCanvasSize();
+        }
         updateUI();
         startGameLoop();
     }
@@ -646,8 +680,8 @@ function createLineParticles() {
     for (let i = 0; i < 10; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
-        particle.style.left = Math.random() * 300 + 'px';
-        particle.style.top = Math.random() * 600 + 'px';
+        particle.style.left = Math.random() * gameCanvas.width + 'px';
+        particle.style.top = Math.random() * gameCanvas.height + 'px';
         gameArea.appendChild(particle);
         
         setTimeout(() => {
@@ -720,6 +754,8 @@ function update(time) {
 }
 
 function render() {
+    const blockSize = GAME_CONFIG.blockSize;
+    
     // Limpiar canvas
     gameCtx.fillStyle = '#FFFFFF';
     gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
@@ -737,15 +773,17 @@ function render() {
 }
 
 function renderGrid() {
+    const blockSize = GAME_CONFIG.blockSize;
+    
     for (let y = 0; y < GAME_CONFIG.gridHeight; y++) {
         for (let x = 0; x < GAME_CONFIG.gridWidth; x++) {
             if (gameState.grid[y][x]) {
                 gameCtx.fillStyle = gameState.grid[y][x];
                 gameCtx.fillRect(
-                    x * GAME_CONFIG.blockSize,
-                    y * GAME_CONFIG.blockSize,
-                    GAME_CONFIG.blockSize - 1,
-                    GAME_CONFIG.blockSize - 1
+                    x * blockSize,
+                    y * blockSize,
+                    blockSize - 1,
+                    blockSize - 1
                 );
             }
         }
@@ -753,15 +791,16 @@ function renderGrid() {
 }
 
 function renderPiece(piece, ctx) {
+    const blockSize = GAME_CONFIG.blockSize;
     ctx.fillStyle = piece.color;
     
     for (let i = 0; i < piece.shape.length; i++) {
         for (let j = 0; j < piece.shape[i].length; j++) {
             if (piece.shape[i][j]) {
-                const x = (piece.x + j) * GAME_CONFIG.blockSize;
-                const y = (piece.y + i) * GAME_CONFIG.blockSize;
+                const x = (piece.x + j) * blockSize;
+                const y = (piece.y + i) * blockSize;
                 
-                ctx.fillRect(x, y, GAME_CONFIG.blockSize - 1, GAME_CONFIG.blockSize - 1);
+                ctx.fillRect(x, y, blockSize - 1, blockSize - 1);
             }
         }
     }
@@ -773,8 +812,9 @@ function renderNextPiece() {
     
     if (gameState.nextPiece) {
         const piece = gameState.nextPiece;
-        const offsetX = (nextPieceCanvas.width - piece.shape[0].length * 20) / 2;
-        const offsetY = (nextPieceCanvas.height - piece.shape.length * 20) / 2;
+        const blockSize = isMobile ? 15 : 20;
+        const offsetX = (nextPieceCanvas.width - piece.shape[0].length * blockSize) / 2;
+        const offsetY = (nextPieceCanvas.height - piece.shape.length * blockSize) / 2;
         
         nextPieceCtx.fillStyle = piece.color;
         
@@ -782,10 +822,10 @@ function renderNextPiece() {
             for (let j = 0; j < piece.shape[i].length; j++) {
                 if (piece.shape[i][j]) {
                     nextPieceCtx.fillRect(
-                        offsetX + j * 20,
-                        offsetY + i * 20,
-                        19,
-                        19
+                        offsetX + j * blockSize,
+                        offsetY + i * blockSize,
+                        blockSize - 1,
+                        blockSize - 1
                     );
                 }
             }
