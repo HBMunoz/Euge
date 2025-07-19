@@ -73,11 +73,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (isMobile) {
         document.body.classList.add('mobile-device');
-        // Prevenir scroll y zoom
+        
+        // Prevenir scroll y zoom de manera más agresiva
         document.addEventListener('touchmove', (e) => {
-            if (e.target.closest('#gameCanvas')) {
-                e.preventDefault();
-            }
+            e.preventDefault();
         }, { passive: false });
         
         // Prevenir zoom con doble toque en todo el documento
@@ -87,10 +86,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, { passive: false });
         
+        // Prevenir el comportamiento de pull-to-refresh
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches[0].clientY < 50) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
         // Ajustar el tamaño del canvas según el dispositivo
         adjustCanvasSize();
         window.addEventListener('resize', adjustCanvasSize);
-        window.addEventListener('orientationchange', adjustCanvasSize);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(adjustCanvasSize, 100);
+        });
     }
     
     initializeGame();
@@ -105,12 +113,24 @@ function adjustCanvasSize() {
     const gameArea = document.querySelector('.game-area');
     
     if (gameScreen && gameScreen.classList.contains('active')) {
-        const viewportHeight = window.innerHeight;
-        const viewportWidth = window.innerWidth;
+        // Usar las dimensiones reales del viewport
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        
+        // Calcular el espacio usado por la UI
+        const gameInfo = document.querySelector('.game-info');
+        const gameControls = document.querySelector('.game-controls');
+        const infoHeight = gameInfo ? gameInfo.offsetHeight : 60;
+        const controlsHeight = gameControls ? gameControls.offsetHeight : 50;
+        
+        // Espacio disponible para el canvas con pequeño margen
+        const availableHeight = viewportHeight - infoHeight - controlsHeight - 20;
+        const availableWidth = viewportWidth - 20;
         
         // Calcular el tamaño óptimo del canvas
-        const maxCanvasHeight = viewportHeight * 0.7; // 70% de la altura
-        const cellSize = Math.floor(Math.min(maxCanvasHeight / GAME_CONFIG.gridHeight, viewportWidth * 0.9 / GAME_CONFIG.gridWidth));
+        const cellSizeByHeight = Math.floor(availableHeight / GAME_CONFIG.gridHeight);
+        const cellSizeByWidth = Math.floor(availableWidth / GAME_CONFIG.gridWidth);
+        const cellSize = Math.min(cellSizeByHeight, cellSizeByWidth);
         
         GAME_CONFIG.blockSize = cellSize;
         
@@ -120,8 +140,8 @@ function adjustCanvasSize() {
         }
         
         if (nextPieceCanvas) {
-            nextPieceCanvas.width = 80;
-            nextPieceCanvas.height = 80;
+            nextPieceCanvas.width = 60;
+            nextPieceCanvas.height = 60;
         }
     }
 }
@@ -267,14 +287,10 @@ function handleTouchStart(e) {
     touchStartY = touch.clientY;
     touchStartTime = Date.now();
     
-    // Detectar triple toque para pausa
+    // Detectar doble toque para bajada rápida
     const currentTime = Date.now();
     if (currentTime - lastTouchTime < 300) {
         touchCount++;
-        if (touchCount >= 3) {
-            togglePause();
-            touchCount = 0;
-        }
     } else {
         touchCount = 1;
     }
@@ -471,7 +487,10 @@ function startNewGame() {
     resetGame();
     showScreen('gameScreen');
     if (isMobile) {
-        adjustCanvasSize();
+        // Dar tiempo para que el DOM se actualice antes de ajustar el canvas
+        setTimeout(() => {
+            adjustCanvasSize();
+        }, 50);
     }
     gameState.currentPiece = createPiece();
     gameState.nextPiece = createPiece();
@@ -485,7 +504,9 @@ function continueGame() {
         gameState = JSON.parse(savedGame);
         showScreen('gameScreen');
         if (isMobile) {
-            adjustCanvasSize();
+            setTimeout(() => {
+                adjustCanvasSize();
+            }, 50);
         }
         updateUI();
         startGameLoop();
@@ -812,7 +833,7 @@ function renderNextPiece() {
     
     if (gameState.nextPiece) {
         const piece = gameState.nextPiece;
-        const blockSize = isMobile ? 15 : 20;
+        const blockSize = isMobile ? 12 : 20;
         const offsetX = (nextPieceCanvas.width - piece.shape[0].length * blockSize) / 2;
         const offsetY = (nextPieceCanvas.height - piece.shape.length * blockSize) / 2;
         
