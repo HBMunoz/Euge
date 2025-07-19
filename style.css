@@ -279,17 +279,8 @@ html {
 }
 
 body {
-  background: var(--color-background);
-  font-family: var(--font-family-base);
   margin: 0;
   padding: 0;
-  min-height: 100vh;
-  overflow-x: hidden;
-  /* Prevenir el rebote elástico en iOS */
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
 }
 
 *,
@@ -588,13 +579,11 @@ select.form-control {
 
 /* Container layout */
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 var(--space-16);
-  min-height: 100vh;
-  height: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: var(--space-16);
+  padding-left: var(--space-16);
 }
 
 @media (min-width: 640px) {
@@ -746,10 +735,18 @@ body {
   padding: 0;
   min-height: 100vh;
   overflow-x: hidden;
-  /* Prevenir el rebote elástico en iOS */
+}
+
+/* Prevenir scroll en móviles */
+.mobile-device {
+  overflow: hidden;
   position: fixed;
   width: 100%;
   height: 100%;
+}
+
+.mobile-device .container {
+  height: 100vh;
   overflow: hidden;
 }
 
@@ -758,9 +755,6 @@ body {
   margin: 0 auto;
   padding: 0 var(--space-16);
   min-height: 100vh;
-  height: 100%;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Pantallas - Corregido para funcionar correctamente */
@@ -918,14 +912,6 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  /* Mejorar la experiencia táctil */
-  touch-action: none;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
 }
 
 #gameCanvas {
@@ -933,9 +919,10 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   background: rgba(255, 255, 255, 0.9);
   border: 2px solid rgba(255, 255, 255, 0.5);
-  /* Prevenir el zoom y la selección en móviles */
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
+  touch-action: none; /* Importante para controles táctiles */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .game-overlay {
@@ -1050,6 +1037,7 @@ body {
   transition: all 0.3s var(--ease-standard);
   cursor: pointer;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn::before {
@@ -1153,7 +1141,113 @@ body {
   animation: fadeInUp 0.8s var(--ease-standard);
 }
 
-/* Responsive Design */
+/* Responsive Design para móviles */
+.mobile-device #gameScreen {
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-device .game-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: var(--space-8);
+  gap: var(--space-8);
+}
+
+.mobile-device .game-info {
+  flex-direction: row;
+  justify-content: space-between;
+  gap: var(--space-8);
+  order: -1;
+}
+
+.mobile-device .info-section {
+  padding: var(--space-8);
+  flex: 1;
+}
+
+.mobile-device .info-section h3 {
+  font-size: var(--font-size-xs);
+  margin-bottom: var(--space-4);
+}
+
+.mobile-device .score-display {
+  font-size: var(--font-size-lg);
+}
+
+.mobile-device #nextPieceCanvas {
+  width: 80px;
+  height: 80px;
+}
+
+.mobile-device .game-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+.mobile-device #gameCanvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.mobile-device .game-controls {
+  order: 1;
+  flex-direction: row;
+  justify-content: center;
+  gap: var(--space-16);
+}
+
+.mobile-device .controls-info {
+  display: none;
+}
+
+.mobile-device .btn--sm {
+  padding: var(--space-6) var(--space-16);
+  font-size: var(--font-size-sm);
+}
+
+/* Overlays móviles */
+.mobile-device .overlay {
+  padding: var(--space-24);
+  margin: var(--space-16);
+  max-width: 90%;
+}
+
+.mobile-device .overlay-content h2 {
+  font-size: var(--font-size-2xl);
+}
+
+.mobile-device .overlay-content p {
+  font-size: var(--font-size-base);
+}
+
+/* Pantalla principal móvil */
+.mobile-device .main-content {
+  padding: var(--space-24);
+  margin: var(--space-16);
+  max-width: 90%;
+}
+
+.mobile-device .game-title {
+  font-size: clamp(2.5rem, 10vw, 4rem);
+}
+
+.mobile-device .game-subtitle {
+  font-size: var(--font-size-base);
+}
+
+.mobile-device .volume-slider {
+  width: 80%;
+  max-width: 250px;
+}
+
+/* Responsive Design general */
 @media (max-width: 768px) {
   .game-layout {
     grid-template-columns: 1fr;
@@ -1186,36 +1280,6 @@ body {
   .game-title {
     font-size: clamp(2rem, 12vw, 4rem);
   }
-  
-  /* Mostrar controles táctiles en móvil */
-  .controls-info {
-    display: block !important;
-  }
-  
-  .controls-info h4 {
-    margin-bottom: var(--space-16);
-  }
-  
-  .control-item {
-    display: none;
-  }
-  
-  /* Agregar instrucciones táctiles */
-  .controls-info::after {
-    content: '';
-    display: block;
-    padding: var(--space-12);
-    background: rgba(var(--euge-primary), 0.1);
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-sm);
-    color: var(--euge-text-dark);
-    line-height: 1.6;
-  }
-  
-  .controls-info:not(.touch-explained)::after {
-    content: '👆 Desliza arriba: Rotar\A👈👉 Desliza lateral: Mover\A👇 Desliza abajo: Bajar\A👆👆 Doble toque: Caída rápida';
-    white-space: pre-line;
-  }
 }
 
 @media (max-width: 480px) {
@@ -1228,22 +1292,29 @@ body {
     max-width: 200px;
   }
   
-  /* En móviles pequeños, ocultar completamente la sección de controles */
-  .game-controls {
-    display: none !important;
+  .controls-info {
+    display: none;
+  }
+}
+
+/* Orientación horizontal en móviles */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-device .game-layout {
+    flex-direction: row;
   }
   
-  .game-layout {
-    grid-template-columns: 1fr;
-    gap: var(--space-12);
+  .mobile-device .game-info {
+    flex-direction: column;
+    width: 150px;
   }
   
-  #gameCanvas {
-    touch-action: none;
-    width: 90vw;
-    max-width: 300px;
-    height: calc(90vw * 2);
-    max-height: 600px;
+  .mobile-device .game-area {
+    flex: 1;
+  }
+  
+  .mobile-device .game-controls {
+    width: 150px;
+    flex-direction: column;
   }
 }
 
@@ -1284,4 +1355,51 @@ body {
 
 .slide-in-right {
   animation: slideInRight 0.6s var(--ease-standard);
+}
+
+/* Prevenir selección de texto en elementos del juego */
+.game-area,
+.game-info,
+.game-controls,
+.btn,
+.score-display {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Forzar orientación vertical con mensaje */
+@media (orientation: landscape) {
+  .mobile-device::before {
+    content: "Por favor, gira tu dispositivo";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-background);
+    color: var(--color-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-xl);
+    z-index: 9999;
+    text-align: center;
+    padding: var(--space-32);
+  }
+  
+  .mobile-device .screen {
+    display: none;
+  }
+}
+
+/* Mejoras para PWA */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
 }
